@@ -1,17 +1,15 @@
 import tkinter as tk
 from tkinter import filedialog
 import fitz
-import io
-from PIL import ImageTk, Image
 import os
 import tempfile
+from PIL import Image, ImageTk
 
 class PDFMergerApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.initUI()
         self.last_open_dir = None
-        self.preview_image = None
 
     def initUI(self):
         self.minsize(1300, 800)  # Setzt die minimale Größe des Fensters auf 1300x800
@@ -22,17 +20,12 @@ class PDFMergerApp(tk.Tk):
         self.left_frame.pack_propagate(False)
         self.left_frame.pack(side=tk.LEFT)
 
-        # Erstellt einen Frame für den rechten Bereich
-        self.right_frame = tk.Frame(self, width=800, height=800)
-        self.right_frame.pack_propagate(False)
-        self.right_frame.pack(side=tk.RIGHT)
-
         self.select_button = tk.Button(self.left_frame, text='PDF auswählen', command=self.select_pdf, height=2)
         self.select_button.pack(fill=tk.X)
 
         self.pdf_listbox = tk.Listbox(self.left_frame, selectmode=tk.MULTIPLE)
         self.pdf_listbox.pack(fill=tk.BOTH, expand=1)
-        self.pdf_listbox.bind('<ButtonRelease-1>', self.update_preview)  # Ändert das Ereignis auf <ButtonRelease-1>
+        self.pdf_listbox.bind('<<ListboxSelect>>', self.show_preview)  # Zeigt die Vorschau an, wenn ein Element ausgewählt wird
 
         self.merge_button = tk.Button(self.left_frame, text='Merge', command=self.merge_pdfs, height=2)
         self.merge_button.pack(fill=tk.X)
@@ -41,6 +34,14 @@ class PDFMergerApp(tk.Tk):
         self.quit_button.pack(side=tk.BOTTOM, fill=tk.X)
 
         self.bind('<Return>', self.merge_pdfs)
+
+        # Erstellt einen Frame für die Vorschau
+        self.preview_frame = tk.Frame(self, width=800, height=800)
+        self.preview_frame.pack_propagate(False)
+        self.preview_frame.pack(side=tk.RIGHT)
+
+        self.preview_label = tk.Label(self.preview_frame)
+        self.preview_label.pack()
 
     def select_pdf(self):
         pdf_file = filedialog.askopenfilename(filetypes=[("PDF files", "*.pdf")], initialdir=self.last_open_dir)
@@ -52,22 +53,22 @@ class PDFMergerApp(tk.Tk):
         self.pdf_listbox.delete(0, tk.END)
         doc = fitz.open(pdf_file)
         for page_num in range(len(doc)):
-            output_filename = os.path.join(tempfile.gettempdir(), f'{os.path.basename(pdf_file)}_page{page_num+1}.png')
-            page = doc.load_page(page_num)
-            pixmap = page.get_pixmap()
-            pixmap.save(output_filename)
+            output_filename = os.path.join(tempfile.gettempdir(), f'{os.path.basename(pdf_file)}_page{page_num+1}.pdf')
+            new_doc = fitz.open()  # Erstellt ein neues fitz.Document
+            new_doc.insert_pdf(doc, from_page=page_num, to_page=page_num)  # Fügt die Seite in das neue Dokument ein
+            new_doc.save(output_filename)  # Speichert das neue Dokument
             self.pdf_listbox.insert(tk.END, output_filename)
 
-    def update_preview(self, event):
-        selected_index = self.pdf_listbox.nearest(event.y)  # Holt den Index des Elements, auf das geklickt wurde
-        selected_file = self.pdf_listbox.get(selected_index)
-        img = Image.open(selected_file)
-        if self.preview_image:
-            self.preview_image.destroy()
-        image = ImageTk.PhotoImage(img)
-        self.preview_image = tk.Label(self.right_frame, image=image)
-        self.preview_image.image = image
-        self.preview_image.pack()
+    def show_preview(self, event):
+        selected_file = self.pdf_listbox.get(self.pdf_listbox.curselection())
+        doc = fitz.open(selected_file)
+        page = doc.load_page(0)  # Lädt die Seite
+        pix = page.get_pixmap()  # Erstellt ein Pixmap-Objekt
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)  # Erstellt ein PIL Image-Objekt
+        img.thumbnail((800, 800))  # Verkleinert das Bild auf 800x800
+        photo = ImageTk.PhotoImage(img)  # Erstellt ein PhotoImage-Objekt für Tkinter
+        self.preview_label.config(image=photo)
+        self.preview_label.image = photo  # Behält eine Referenz auf das PhotoImage-Objekt
 
     def merge_pdfs(self, event=None):
         selected_files = [self.pdf_listbox.get(i) for i in self.pdf_listbox.curselection()]
@@ -75,7 +76,7 @@ class PDFMergerApp(tk.Tk):
             merger = fitz.open()
             for file in selected_files:
                 doc = fitz.open(file)
-                merger.insertPDF(doc)
+                merger.insert_pdf(doc)  # Korrigierte Methode
             output_name = filedialog.asksaveasfilename(defaultextension=".pdf")
             if output_name:
                 merger.save(output_name)
