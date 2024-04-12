@@ -32,7 +32,7 @@ class PDFMergerApp(tk.Tk):
 
         self.pdf_listbox = tk.Listbox(self.left_frame, selectmode=tk.MULTIPLE)
         self.pdf_listbox.pack(fill=tk.BOTH, expand=1)
-        self.pdf_listbox.bind('<<ListboxSelect>>', self.update_preview)
+        self.pdf_listbox.bind('<ButtonRelease-1>', self.update_preview)  # Ändert das Ereignis auf <ButtonRelease-1>
 
         self.merge_button = tk.Button(self.left_frame, text='Merge', command=self.merge_pdfs, height=2)
         self.merge_button.pack(fill=tk.X)
@@ -59,16 +59,15 @@ class PDFMergerApp(tk.Tk):
             self.pdf_listbox.insert(tk.END, output_filename)
 
     def update_preview(self, event):
-        selected_indices = self.pdf_listbox.curselection()
-        if selected_indices:  # Überprüft, ob ein Element ausgewählt ist
-            selected_file = self.pdf_listbox.get(selected_indices[0])
-            img = Image.open(selected_file)
-            if self.preview_image:
-                self.preview_image.destroy()
-            image = ImageTk.PhotoImage(img)
-            self.preview_image = tk.Label(self.right_frame, image=image)
-            self.preview_image.image = image
-            self.preview_image.pack()
+        selected_index = self.pdf_listbox.nearest(event.y)  # Holt den Index des Elements, auf das geklickt wurde
+        selected_file = self.pdf_listbox.get(selected_index)
+        img = Image.open(selected_file)
+        if self.preview_image:
+            self.preview_image.destroy()
+        image = ImageTk.PhotoImage(img)
+        self.preview_image = tk.Label(self.right_frame, image=image)
+        self.preview_image.image = image
+        self.preview_image.pack()
 
     def merge_pdfs(self, event=None):
         selected_files = [self.pdf_listbox.get(i) for i in self.pdf_listbox.curselection()]
