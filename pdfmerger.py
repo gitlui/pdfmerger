@@ -25,7 +25,7 @@ class PDFMergerApp(tk.Tk):
 
         self.pdf_listbox = tk.Listbox(self.left_frame, selectmode=tk.MULTIPLE)
         self.pdf_listbox.pack(fill=tk.BOTH, expand=1)
-        self.pdf_listbox.bind('<<ListboxSelect>>', self.show_preview)  # Zeigt die Vorschau an, wenn ein Element ausgewählt wird
+        self.pdf_listbox.bind('<ButtonRelease-1>', self.show_preview)  # Zeigt die Vorschau an, wenn die Maustaste losgelassen wird
 
         self.merge_button = tk.Button(self.left_frame, text='Merge', command=self.merge_pdfs, height=2)
         self.merge_button.pack(fill=tk.X)
@@ -60,7 +60,8 @@ class PDFMergerApp(tk.Tk):
             self.pdf_listbox.insert(tk.END, output_filename)
 
     def show_preview(self, event):
-        selected_file = self.pdf_listbox.get(self.pdf_listbox.curselection())
+        selected_index = self.pdf_listbox.nearest(event.y)  # Holt den Index des zuletzt angeklickten Elements
+        selected_file = self.pdf_listbox.get(selected_index)
         doc = fitz.open(selected_file)
         page = doc.load_page(0)  # Lädt die Seite
         pix = page.get_pixmap()  # Erstellt ein Pixmap-Objekt
