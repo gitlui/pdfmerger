@@ -1,15 +1,17 @@
 import tkinter as tk
 from tkinter import filedialog
-from PyPDF2 import PdfMerger, PdfReader, PdfWriter
+import fitz
+import io
+from PIL import ImageTk, Image
 import os
 import tempfile
-import glob
 
 class PDFMergerApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.initUI()
         self.last_open_dir = None
+        self.preview_image = None
 
     def initUI(self):
         self.minsize(1300, 800)  # Setzt die minimale Größe des Fensters auf 1300x800
@@ -30,6 +32,7 @@ class PDFMergerApp(tk.Tk):
 
         self.pdf_listbox = tk.Listbox(self.left_frame, selectmode=tk.MULTIPLE)
         self.pdf_listbox.pack(fill=tk.BOTH, expand=1)
+        self.pdf_listbox.bind('<<ListboxSelect>>', self.update_preview)
 
         self.merge_button = tk.Button(self.left_frame, text='Merge', command=self.merge_pdfs, height=2)
         self.merge_button.pack(fill=tk.X)
@@ -47,31 +50,36 @@ class PDFMergerApp(tk.Tk):
 
     def split_pdf(self, pdf_file):
         self.pdf_listbox.delete(0, tk.END)
-        reader = PdfReader(pdf_file)
-        for page_num in range(len(reader.pages)):
-            writer = PdfWriter()
-            writer.add_page(reader.pages[page_num])
-            output_filename = os.path.join(tempfile.gettempdir(), f'{os.path.basename(pdf_file)}_page{page_num+1}.pdf')
-            with open(output_filename, 'wb') as output_pdf:
-                writer.write(output_pdf)
+        doc = fitz.open(pdf_file)
+        for page_num in range(len(doc)):
+            output_filename = os.path.join(tempfile.gettempdir(), f'{os.path.basename(pdf_file)}_page{page_num+1}.png')
+            page = doc.load_page(page_num)
+            pixmap = page.get_pixmap()
+            pixmap.save(output_filename)
             self.pdf_listbox.insert(tk.END, output_filename)
+
+    def update_preview(self, event):
+        selected_indices = self.pdf_listbox.curselection()
+        if selected_indices:  # Überprüft, ob ein Element ausgewählt ist
+            selected_file = self.pdf_listbox.get(selected_indices[0])
+            img = Image.open(selected_file)
+            if self.preview_image:
+                self.preview_image.destroy()
+            image = ImageTk.PhotoImage(img)
+            self.preview_image = tk.Label(self.right_frame, image=image)
+            self.preview_image.image = image
+            self.preview_image.pack()
 
     def merge_pdfs(self, event=None):
         selected_files = [self.pdf_listbox.get(i) for i in self.pdf_listbox.curselection()]
         if selected_files:
-            merger = PdfMerger()
+            merger = fitz.open()
             for file in selected_files:
-                merger.append(file)
+                doc = fitz.open(file)
+                merger.insertPDF(doc)
             output_name = filedialog.asksaveasfilename(defaultextension=".pdf")
             if output_name:
-                merger.write(output_name)
-                merger.close()
-            self.remove_merged_pages(selected_files)
-
-    def remove_merged_pages(self, merged_pages):
-        for page in merged_pages:
-            os.remove(page)
-            self.pdf_listbox.delete(self.pdf_listbox.get(0, tk.END).index(page))
+                merger.save(output_name)
 
 if __name__ == '__main__':
     app = PDFMergerApp()
