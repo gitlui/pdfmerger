@@ -1,18 +1,15 @@
 import tkinter as tk
 from tkinter import filedialog
-from PyPDF2 import PdfMerger
+from PyPDF2 import PdfMerger, PdfReader, PdfWriter
 import os
-import shutil
+import tempfile
 import glob
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 
 class PDFMergerApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.initUI()
         self.last_open_dir = None
-        self.observer = Observer()
 
     def initUI(self):
         self.minsize(1300, 800)  # Setzt die minimale Größe des Fensters auf 1300x800
@@ -20,15 +17,15 @@ class PDFMergerApp(tk.Tk):
 
         # Erstellt einen Frame für den linken Bereich
         self.left_frame = tk.Frame(self, width=500, height=800)
-        self.left_frame.pack_propagate(False)  # Verhindert, dass der Frame seine Größe ändert, um den Inhalt anzupassen
+        self.left_frame.pack_propagate(False)
         self.left_frame.pack(side=tk.LEFT)
 
         # Erstellt einen Frame für den rechten Bereich
         self.right_frame = tk.Frame(self, width=800, height=800)
-        self.right_frame.pack_propagate(False)  # Verhindert, dass der Frame seine Größe ändert, um den Inhalt anzupassen
+        self.right_frame.pack_propagate(False)
         self.right_frame.pack(side=tk.RIGHT)
 
-        self.select_button = tk.Button(self.left_frame, text='Ordner auswählen', command=self.select_folder, height=2)
+        self.select_button = tk.Button(self.left_frame, text='PDF auswählen', command=self.select_pdf, height=2)
         self.select_button.pack(fill=tk.X)
 
         self.pdf_listbox = tk.Listbox(self.left_frame, selectmode=tk.MULTIPLE)
@@ -42,19 +39,22 @@ class PDFMergerApp(tk.Tk):
 
         self.bind('<Return>', self.merge_pdfs)
 
-    def select_folder(self):
-        folder_name = filedialog.askdirectory(initialdir=self.last_open_dir)
-        if folder_name:
-            self.last_open_dir = folder_name
-            self.load_pdfs(folder_name)
-            self.start_watching_folder(folder_name)
+    def select_pdf(self):
+        pdf_file = filedialog.askopenfilename(filetypes=[("PDF files", "*.pdf")], initialdir=self.last_open_dir)
+        if pdf_file:
+            self.last_open_dir = os.path.dirname(pdf_file)
+            self.split_pdf(pdf_file)
 
-    def load_pdfs(self, folder_name):
+    def split_pdf(self, pdf_file):
         self.pdf_listbox.delete(0, tk.END)
-        pdf_files = glob.glob(os.path.join(folder_name, '*.pdf'))
-        pdf_files.sort()  # Sortiert die Liste der PDF-Dateien
-        for pdf_file in pdf_files:
-            self.pdf_listbox.insert(tk.END, pdf_file)
+        reader = PdfReader(pdf_file)
+        for page_num in range(len(reader.pages)):
+            writer = PdfWriter()
+            writer.add_page(reader.pages[page_num])
+            output_filename = os.path.join(tempfile.gettempdir(), f'{os.path.basename(pdf_file)}_page{page_num+1}.pdf')
+            with open(output_filename, 'wb') as output_pdf:
+                writer.write(output_pdf)
+            self.pdf_listbox.insert(tk.END, output_filename)
 
     def merge_pdfs(self, event=None):
         selected_files = [self.pdf_listbox.get(i) for i in self.pdf_listbox.curselection()]
@@ -66,31 +66,12 @@ class PDFMergerApp(tk.Tk):
             if output_name:
                 merger.write(output_name)
                 merger.close()
-                self.move_to_merged_folder(selected_files, output_name)
+            self.remove_merged_pages(selected_files)
 
-    def move_to_merged_folder(self, source_files, merged_file):
-        merged_filename = os.path.splitext(os.path.basename(merged_file))[0]
-        new_dir = os.path.join(self.last_open_dir, 'merged', merged_filename)
-        os.makedirs(new_dir, exist_ok=True)
-        for file in source_files:
-            shutil.move(file, new_dir)
-
-    def start_watching_folder(self, folder_name):
-        event_handler = MyHandler(self)
-        self.observer.schedule(event_handler, path=folder_name, recursive=True)
-        self.observer.start()
-
-    def quit(self):
-        self.observer.stop()
-        self.observer.join()
-        super().quit()
-
-class MyHandler(FileSystemEventHandler):
-    def __init__(self, app):
-        self.app = app
-
-    def on_modified(self, event):
-        self.app.load_pdfs(self.app.last_open_dir)
+    def remove_merged_pages(self, merged_pages):
+        for page in merged_pages:
+            os.remove(page)
+            self.pdf_listbox.delete(self.pdf_listbox.get(0, tk.END).index(page))
 
 if __name__ == '__main__':
     app = PDFMergerApp()
