@@ -25,8 +25,9 @@ class PDFMergerApp(tk.Tk):
 
         self.pdf_listbox = tk.Listbox(self.left_frame, selectmode=tk.SINGLE)
         self.pdf_listbox.pack(fill=tk.BOTH, expand=1)
-        self.pdf_listbox.bind('<<ListboxSelect>>', self.show_preview)  # Aktualisiert die Vorschau, wenn der Fokus verschoben wird
         self.pdf_listbox.bind('<space>', self.move_to_merge)  # Verschiebt das Element zur Merge-Liste, wenn die Leertaste gedrückt wird
+        self.pdf_listbox.bind('<KeyPress-Up>', self.arrow_key_navigation)  # Aktualisiert die Vorschau, wenn die Pfeiltaste nach oben gedrückt wird
+        self.pdf_listbox.bind('<KeyPress-Down>', self.arrow_key_navigation)  # Aktualisiert die Vorschau, wenn die Pfeiltaste nach unten gedrückt wird
 
         # Erstellt einen Frame für den mittleren Bereich
         self.middle_frame = tk.Frame(self, width=500, height=800)
@@ -68,7 +69,7 @@ class PDFMergerApp(tk.Tk):
             new_doc.save(output_filename)  # Speichert das neue Dokument
             self.pdf_listbox.insert(tk.END, output_filename)
 
-    def show_preview(self, event=None):
+    def show_preview(self):
         selected_index = self.pdf_listbox.curselection()[0] if self.pdf_listbox.curselection() else 0  # Holt den Index des zuletzt angeklickten Elements
         selected_file = self.pdf_listbox.get(selected_index)
         doc = fitz.open(selected_file)
@@ -98,16 +99,30 @@ class PDFMergerApp(tk.Tk):
             merger = fitz.open()
             for file in selected_files:
                 doc = fitz.open(file)
-                merger.insert_pdf(doc)  # Korrigierte Methode
+                merger.insert_pdf(doc) 
             output_name = filedialog.asksaveasfilename(defaultextension=".pdf")
             if output_name:
                 merger.save(output_name)
-                # Entfernen der ausgewählten Seiten aus der Merge-Listbox
+                # Entfernen der ausgewählten Seiten aus der Merge-Listbox und der PDF-Listbox
                 self.merge_listbox.config(state=tk.NORMAL)  # Aktiviert die Merge-Listbox zum Löschen
                 for file in selected_files:
                     self.pdf_listbox.delete(self.pdf_listbox.get(0, tk.END).index(file))  # Entfernt die Seite aus der PDF-Listbox
                     self.merge_listbox.delete(self.merge_listbox.get(0, tk.END).index(file))  # Entfernt die Seite aus der Merge-Listbox
                 self.merge_listbox.config(state=tk.DISABLED)  # Deaktiviert die Merge-Listbox nach dem Löschen
+
+    def arrow_key_navigation(self, event):
+        self.after(300, self.update_selection_and_preview, event)
+
+    def update_selection_and_preview(self, event):
+        current_selection = self.pdf_listbox.curselection()
+        if current_selection:
+            self.pdf_listbox.selection_clear(current_selection)
+            if self.pdf_listbox.get(current_selection):  # Es gibt noch Elemente in der Listbox
+                if event.keysym == 'Up' and current_selection[0] > 0:
+                    self.pdf_listbox.selection_set(current_selection[0] - 1)
+                elif event.keysym == 'Down' and current_selection[0] < self.pdf_listbox.size() - 1:
+                    self.pdf_listbox.selection_set(current_selection[0] + 1)
+                self.show_preview()
 
 if __name__ == '__main__':
     app = PDFMergerApp()
