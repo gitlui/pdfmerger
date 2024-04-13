@@ -59,8 +59,8 @@ class PDFMergerApp(tk.Tk):
             new_doc.save(output_filename)  # Speichert das neue Dokument
             self.pdf_listbox.insert(tk.END, output_filename)
 
-    def show_preview(self, event):
-        selected_index = self.pdf_listbox.nearest(event.y)  # Holt den Index des zuletzt angeklickten Elements
+    def show_preview(self, event=None):
+        selected_index = self.pdf_listbox.nearest(event.y) if event else 0  # Holt den Index des zuletzt angeklickten Elements
         selected_file = self.pdf_listbox.get(selected_index)
         doc = fitz.open(selected_file)
         page = doc.load_page(0)  # Lädt die Seite
@@ -72,7 +72,8 @@ class PDFMergerApp(tk.Tk):
         self.preview_label.image = photo  # Behält eine Referenz auf das PhotoImage-Objekt
 
     def merge_pdfs(self, event=None):
-        selected_files = [self.pdf_listbox.get(i) for i in self.pdf_listbox.curselection()]
+        selected_indices = self.pdf_listbox.curselection()
+        selected_files = [self.pdf_listbox.get(i) for i in selected_indices]
         if selected_files:
             merger = fitz.open()
             for file in selected_files:
@@ -81,6 +82,11 @@ class PDFMergerApp(tk.Tk):
             output_name = filedialog.asksaveasfilename(defaultextension=".pdf")
             if output_name:
                 merger.save(output_name)
+                # Entfernen der ausgewählten Seiten aus der Listbox
+                for i in sorted(selected_indices, reverse=True):
+                    self.pdf_listbox.delete(i)
+                # Zeigt die Vorschau der obersten Seite an
+                self.show_preview()
 
 if __name__ == '__main__':
     app = PDFMergerApp()
