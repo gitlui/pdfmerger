@@ -10,18 +10,18 @@ class PDFMergerApp(tk.Tk):
         super().__init__()
         self.initUI()
         self.last_open_dir = None
-        self.filename_mapping = {}  # Wörterbuch zum Speichern der Zuordnung von Dateinamen und Seitennummern zu vollständigen Pfaden
-
+        self.filename_mapping = {}  
+        
     def initUI(self):
-        self.minsize(1600, 800)  # Setzt die minimale Größe des Fensters auf 1600x800
+        self.minsize(1600, 1024)
         self.title('PDF Merger')
 
         # Erstellt einen Frame für den linken Bereich
-        self.left_frame = tk.Frame(self, width=500, height=800)
+        self.left_frame = tk.Frame(self, width=300, height=1024)
         self.left_frame.pack_propagate(False)
-        self.left_frame.pack(side=tk.LEFT)
+        self.left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
 
-        self.select_button = tk.Button(self.left_frame, text='PDF auswählen', command=self.select_pdf, height=2)
+        self.select_button = tk.Button(self.left_frame, text='PDF auswählen', command=self.select_pdf, height=3)
         self.select_button.pack(side=tk.BOTTOM, fill=tk.X)  # Setzt den Button unten links
 
         self.pdf_listbox = tk.Listbox(self.left_frame, selectmode=tk.SINGLE)
@@ -32,23 +32,23 @@ class PDFMergerApp(tk.Tk):
         self.pdf_listbox.bind('<Delete>', self.delete_selected)
 
         # Erstellt einen Frame für den mittleren Bereich
-        self.middle_frame = tk.Frame(self, width=500, height=800)
+        self.middle_frame = tk.Frame(self, width=300, height=1024)
         self.middle_frame.pack_propagate(False)
-        self.middle_frame.pack(side=tk.LEFT)
+        self.middle_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
 
         self.merge_listbox = tk.Listbox(self.middle_frame, selectmode=tk.SINGLE, state=tk.DISABLED)
         self.merge_listbox.pack(fill=tk.BOTH, expand=1)
 
-        self.merge_button = tk.Button(self.middle_frame, text='Merge', command=self.merge_pdfs, height=2)
+        self.merge_button = tk.Button(self.middle_frame, text='Merge', command=self.merge_pdfs, height=3)
         self.merge_button.pack(side=tk.BOTTOM, fill=tk.X)  # Setzt den Button in der Mitte unten
 
         # Erstellt einen Frame für die Vorschau
-        self.preview_frame = tk.Frame(self, width=800, height=800)
+        self.preview_frame = tk.Frame(self, width=800, height=1024)
         self.preview_frame.pack_propagate(False)
-        self.preview_frame.pack(side=tk.RIGHT)
+        self.preview_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=1)
 
-        self.quit_button = tk.Button(self.preview_frame, text='Beenden', command=self.quit, height=2)
-        self.quit_button.pack(side=tk.BOTTOM, fill=tk.X)  # Setzt den Button unten rechts unter der Vorschau
+        self.quit_button = tk.Button(self.preview_frame, text='Beenden', command=self.quit, height=3)
+        self.quit_button.pack(side=tk.BOTTOM, anchor='sw', fill=tk.X)
 
         self.preview_label = tk.Label(self.preview_frame)
         self.preview_label.pack()
@@ -84,7 +84,7 @@ class PDFMergerApp(tk.Tk):
         page = doc.load_page(0)  # Lädt die Seite
         pix = page.get_pixmap()  # Erstellt ein Pixmap-Objekt
         img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)  # Erstellt ein PIL Image-Objekt
-        img.thumbnail((800, 800))  # Verkleinert das Bild auf 800x800
+        img.thumbnail((800, 1024))  # Verkleinert das Bild auf 800x800
         photo = ImageTk.PhotoImage(img)  # Erstellt ein PhotoImage-Objekt für Tkinter
         self.preview_label.config(image=photo)
         self.preview_label.image = photo  # Behält eine Referenz auf das PhotoImage-Objekt
