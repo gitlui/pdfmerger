@@ -21,7 +21,7 @@ class PDFMergerApp(tk.Tk):
         self.left_frame.pack(side=tk.LEFT)
 
         self.select_button = tk.Button(self.left_frame, text='PDF auswählen', command=self.select_pdf, height=2)
-        self.select_button.pack(fill=tk.X)
+        self.select_button.pack(side=tk.BOTTOM, fill=tk.X)  # Setzt den Button unten links
 
         self.pdf_listbox = tk.Listbox(self.left_frame, selectmode=tk.SINGLE)
         self.pdf_listbox.pack(fill=tk.BOTH, expand=1)
@@ -38,26 +38,28 @@ class PDFMergerApp(tk.Tk):
         self.merge_listbox.pack(fill=tk.BOTH, expand=1)
 
         self.merge_button = tk.Button(self.middle_frame, text='Merge', command=self.merge_pdfs, height=2)
-        self.merge_button.pack(fill=tk.X)
-
-        self.quit_button = tk.Button(self.middle_frame, text='Beenden', command=self.quit, height=2)
-        self.quit_button.pack(side=tk.BOTTOM, fill=tk.X)
-
-        self.bind('<Return>', self.merge_pdfs)
+        self.merge_button.pack(side=tk.BOTTOM, fill=tk.X)  # Setzt den Button in der Mitte unten
 
         # Erstellt einen Frame für die Vorschau
         self.preview_frame = tk.Frame(self, width=800, height=800)
         self.preview_frame.pack_propagate(False)
         self.preview_frame.pack(side=tk.RIGHT)
 
+        self.quit_button = tk.Button(self.preview_frame, text='Beenden', command=self.quit, height=2)
+        self.quit_button.pack(side=tk.BOTTOM, fill=tk.X)  # Setzt den Button unten rechts unter der Vorschau
+
         self.preview_label = tk.Label(self.preview_frame)
         self.preview_label.pack()
+
+        self.bind('<Return>', self.merge_pdfs)
 
     def select_pdf(self):
         pdf_file = filedialog.askopenfilename(filetypes=[("PDF files", "*.pdf")], initialdir=self.last_open_dir)
         if pdf_file:
             self.last_open_dir = os.path.dirname(pdf_file)
             self.split_pdf(pdf_file)
+            self.pdf_listbox.selection_set(0)  # Wählt den ersten Eintrag in der Liste aus
+            self.show_preview()  # Lädt die Vorschau für die erste Seite
 
     def split_pdf(self, pdf_file):
         self.pdf_listbox.delete(0, tk.END)
@@ -109,9 +111,11 @@ class PDFMergerApp(tk.Tk):
                     self.pdf_listbox.delete(self.pdf_listbox.get(0, tk.END).index(file))  # Entfernt die Seite aus der PDF-Listbox
                     self.merge_listbox.delete(self.merge_listbox.get(0, tk.END).index(file))  # Entfernt die Seite aus der Merge-Listbox
                 self.merge_listbox.config(state=tk.DISABLED)  # Deaktiviert die Merge-Listbox nach dem Löschen
+        self.focus_force()  # Setzt den Fokus auf das Fenster
+        self.pdf_listbox.focus_set()  # Setzt den Fokus auf die pdf_listbox
 
     def arrow_key_navigation(self, event):
-        self.after(300, self.update_selection_and_preview, event)
+        self.after(50, self.update_selection_and_preview, event)
 
     def update_selection_and_preview(self, event):
         current_selection = self.pdf_listbox.curselection()
