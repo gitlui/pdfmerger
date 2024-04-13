@@ -29,6 +29,7 @@ class PDFMergerApp(tk.Tk):
         self.pdf_listbox.bind('<space>', self.move_to_merge)  
         self.pdf_listbox.bind('<KeyPress-Up>', self.arrow_key_navigation)  
         self.pdf_listbox.bind('<KeyPress-Down>', self.arrow_key_navigation)  
+        self.pdf_listbox.bind('<Delete>', self.delete_selected)
 
         # Erstellt einen Frame für den mittleren Bereich
         self.middle_frame = tk.Frame(self, width=500, height=800)
@@ -135,7 +136,22 @@ class PDFMergerApp(tk.Tk):
                     self.pdf_listbox.selection_set(current_selection[0] - 1)
                 elif event.keysym == 'Down' and current_selection[0] < self.pdf_listbox.size() - 1:
                     self.pdf_listbox.selection_set(current_selection[0] + 1)
+                elif event.keysym == 'Up' and current_selection[0] == 0:
+                    self.pdf_listbox.selection_set(0)  # Setzt die Auswahl auf das erste Element
+                elif event.keysym == 'Down' and current_selection[0] == self.pdf_listbox.size() - 1:
+                    self.pdf_listbox.selection_set(self.pdf_listbox.size() - 1)  # Setzt die Auswahl auf das letzte Element
                 self.show_preview()
+
+    def delete_selected(self, event=None):
+        selected_index = self.pdf_listbox.curselection()  # Holt den Index des aktuell ausgewählten Elements
+        if selected_index:  # Überprüft, ob ein Element ausgewählt ist
+            selected_file = self.pdf_listbox.get(selected_index)  # Holt den Dateinamen und die Seitenzahl für das ausgewählte Element
+            self.pdf_listbox.delete(selected_index)  # Entfernt das ausgewählte Element aus der Listbox
+            del self.filename_mapping[selected_file]  # Entfernt den Eintrag aus dem Wörterbuch
+            if self.pdf_listbox.size() > 0:  # Es gibt noch Elemente in der Listbox
+                new_index = min(selected_index[0], self.pdf_listbox.size() - 1)  # Der neue Index ist entweder der alte Index oder der letzte Index in der Listbox, je nachdem, welcher kleiner ist
+                self.pdf_listbox.selection_set(new_index)  # Wählt das Element am neuen Index aus
+                self.show_preview()  # Lädt die Vorschau für das neue ausgewählte Element
 
 if __name__ == '__main__':
     app = PDFMergerApp()
