@@ -10,6 +10,7 @@ class PDFMergerApp(tk.Tk):
         super().__init__()
         self.initUI()
         self.last_open_dir = None
+        self.filename_mapping = {}  # Wörterbuch zum Speichern der Zuordnung von Dateinamen und Seitennummern zu vollständigen Pfaden
 
     def initUI(self):
         self.minsize(1600, 800)  # Setzt die minimale Größe des Fensters auf 1600x800
@@ -25,9 +26,9 @@ class PDFMergerApp(tk.Tk):
 
         self.pdf_listbox = tk.Listbox(self.left_frame, selectmode=tk.SINGLE)
         self.pdf_listbox.pack(fill=tk.BOTH, expand=1)
-        self.pdf_listbox.bind('<space>', self.move_to_merge)  # Verschiebt das Element zur Merge-Liste, wenn die Leertaste gedrückt wird
-        self.pdf_listbox.bind('<KeyPress-Up>', self.arrow_key_navigation)  # Aktualisiert die Vorschau, wenn die Pfeiltaste nach oben gedrückt wird
-        self.pdf_listbox.bind('<KeyPress-Down>', self.arrow_key_navigation)  # Aktualisiert die Vorschau, wenn die Pfeiltaste nach unten gedrückt wird
+        self.pdf_listbox.bind('<space>', self.move_to_merge)  
+        self.pdf_listbox.bind('<KeyPress-Up>', self.arrow_key_navigation)  
+        self.pdf_listbox.bind('<KeyPress-Down>', self.arrow_key_navigation)  
 
         # Erstellt einen Frame für den mittleren Bereich
         self.middle_frame = tk.Frame(self, width=500, height=800)
@@ -69,11 +70,13 @@ class PDFMergerApp(tk.Tk):
             new_doc = fitz.open()  # Erstellt ein neues fitz.Document
             new_doc.insert_pdf(doc, from_page=page_num, to_page=page_num)  # Fügt die Seite in das neue Dokument ein
             new_doc.save(output_filename)  # Speichert das neue Dokument
-            self.pdf_listbox.insert(tk.END, output_filename)
+            display_name = f'{os.path.basename(pdf_file)}_page{page_num+1}'  # Erstellt den anzuzeigenden Namen
+            self.pdf_listbox.insert(tk.END, display_name)  # Fügt den Dateinamen und die Seitenzahl in die Listbox ein
+            self.filename_mapping[display_name] = output_filename  # Fügt die Zuordnung von Dateinamen und Seitennummern zu vollständigen Pfaden hinzu
 
     def show_preview(self):
         selected_index = self.pdf_listbox.curselection()[0] if self.pdf_listbox.curselection() else 0  # Holt den Index des zuletzt angeklickten Elements
-        selected_file = self.pdf_listbox.get(selected_index)
+        selected_file = self.filename_mapping[self.pdf_listbox.get(selected_index)]  # Holt den vollständigen Pfad für das ausgewählte Element
         doc = fitz.open(selected_file)
         page = doc.load_page(0)  # Lädt die Seite
         pix = page.get_pixmap()  # Erstellt ein Pixmap-Objekt
@@ -85,7 +88,7 @@ class PDFMergerApp(tk.Tk):
 
     def move_to_merge(self, event=None):
         selected_index = self.pdf_listbox.curselection()[0] if self.pdf_listbox.curselection() else 0  # Holt den Index des zuletzt angeklickten Elements
-        selected_file = self.pdf_listbox.get(selected_index)
+        selected_file = self.pdf_listbox.get(selected_index)  # Holt den Dateinamen und die Seitenzahl für das ausgewählte Element
         if selected_file in self.merge_listbox.get(0, tk.END):
             self.merge_listbox.config(state=tk.NORMAL)  # Aktiviert die Merge-Listbox zum Entfernen
             self.merge_listbox.delete(self.merge_listbox.get(0, tk.END).index(selected_file))
@@ -100,7 +103,7 @@ class PDFMergerApp(tk.Tk):
         if selected_files:
             merger = fitz.open()
             for file in selected_files:
-                doc = fitz.open(file)
+                doc = fitz.open(self.filename_mapping[file])  # Holt den vollständigen Pfad für das ausgewählte Element
                 merger.insert_pdf(doc) 
             output_name = filedialog.asksaveasfilename(defaultextension=".pdf")
             if output_name:
@@ -110,6 +113,7 @@ class PDFMergerApp(tk.Tk):
                 for file in selected_files:
                     self.pdf_listbox.delete(self.pdf_listbox.get(0, tk.END).index(file))  # Entfernt die Seite aus der PDF-Listbox
                     self.merge_listbox.delete(self.merge_listbox.get(0, tk.END).index(file))  # Entfernt die Seite aus der Merge-Listbox
+                    del self.filename_mapping[file]  # Entfernt den Eintrag aus dem Wörterbuch
                 self.merge_listbox.config(state=tk.DISABLED)  # Deaktiviert die Merge-Listbox nach dem Löschen
         self.focus_force()  # Setzt den Fokus auf das Fenster
         self.pdf_listbox.focus_set()  # Setzt den Fokus auf die pdf_listbox
