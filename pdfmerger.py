@@ -119,6 +119,9 @@ class PDFMergerApp(tk.Tk):
                 self.merge_listbox.config(state=tk.DISABLED)  # Deaktiviert die Merge-Listbox nach dem Löschen
         self.focus_force()  # Setzt den Fokus auf das Fenster
         self.pdf_listbox.focus_set()  # Setzt den Fokus auf die pdf_listbox
+        if self.pdf_listbox.size() > 0:  # Es gibt noch Elemente in der Listbox
+            self.pdf_listbox.selection_set(0)  # Wählt das oberste Element in der Liste aus
+            self.show_preview()  # Lädt die Vorschau für das oberste Element
 
     def arrow_key_navigation(self, event):
         self.after(50, self.update_selection_and_preview, event)
