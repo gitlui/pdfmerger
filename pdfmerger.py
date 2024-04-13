@@ -61,6 +61,8 @@ class PDFMergerApp(tk.Tk):
             self.split_pdf(pdf_file)
             self.pdf_listbox.selection_set(0)  # Wählt den ersten Eintrag in der Liste aus
             self.show_preview()  # Lädt die Vorschau für die erste Seite
+        self.focus_force()  # Setzt den Fokus auf das Fenster
+        self.pdf_listbox.focus_set()  # Setzt den Fokus auf die pdf_listbox
 
     def split_pdf(self, pdf_file):
         self.pdf_listbox.delete(0, tk.END)
