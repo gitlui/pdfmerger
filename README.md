@@ -7,7 +7,7 @@ I needed a way to quickly split those pages up into separate pdfs again.
 `pip install PyMuPDF Pillow`
 
 ## Starting manually
-python pdfmerger.py
+`python pdfmerger.py`
 
 ## Usage
 This tool allows you to open a multipage pdf.
